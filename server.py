@@ -18,30 +18,52 @@ class Battlesnake(object):
         # TIP: If you open your Battlesnake URL in browser you should see this data
         return {
             "apiversion": "1",
-            "author": "dplassgit",  # TODO: Your Battlesnake Username
-            "color": "#ff00ff",  # TODO: Personalize
-            "head": "default",  # TODO: Personalize
-            "tail": "default",  # TODO: Personalize
+            "author": "dplassgit",
+            "color": "#ff00ff",
+            "head": "bendr",
+            "tail": "pixel",
         }
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
     def start(self):
         # This function is called everytime your snake is entered into a game.
-        # cherrypy.request.json contains information about the game that's about to be played.
-        data = cherrypy.request.json
-
+        
         print("START")
         return "ok"
 
+    def print_board(self, data):
+      board = [['.' for x in range(self.width)] for y in range(self.height)]
+      for food in data["board"]["food"]:
+        board[food["y"]][food["x"]] = "F"
+      for snake in data["board"]["snakes"]:
+        body = snake["body"]
+        for segment in body:
+          board[segment["y"]][segment["x"]] = "e"
+        head = snake["head"]
+        board[head["y"]][head["x"]] = "E"
+      you = data["you"]
+      for segment in you["body"]:
+        board[segment["y"]][segment["x"]] = "m"
+      head = you["head"]
+      board[head["y"]][head["x"]] = "M"
+      for row in range(self.height-1, 0, -1):
+        print(''.join(board[row]))
+  
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def move(self):
-        # This function is called on every turn of a game. It's how your snake decides where to move.
-        # Valid moves are "up", "down", "left", or "right".
-        # TODO: Use the information in cherrypy.request.json to decide your next move.
         data = cherrypy.request.json
+
+        self.width = data["board"]["width"]
+        self.height = data["board"]["height"]
+        self.me = data["you"]
+        self.x = self.me["head"]["x"]
+        self.y = self.me["head"]["y"]
+        print("x,y=%d,%d" % (self.x, self.y))
+
+        self.print_board(data)
 
         # Choose a random direction to move in
         possible_moves = ["up", "down", "left", "right"]
@@ -53,10 +75,6 @@ class Battlesnake(object):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     def end(self):
-        # This function is called when a game your snake was in ends.
-        # It's purely for informational purposes, you don't have to make any decisions here.
-        data = cherrypy.request.json
-
         print("END")
         return "ok"
 
