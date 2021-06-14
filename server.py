@@ -1,13 +1,12 @@
 import os
 import random
-
 import cherrypy
 
 """
 This is a simple Battlesnake server written in Python.
 For instructions see https://github.com/BattlesnakeOfficial/starter-snake-python/README.md
 """
-possible_moves = ["up", "down", "left", "right"]
+move_names = ["up", "down", "left", "right"]
 moves_dx = [0, 0, -1, 1]
 moves_dy = [1, -1, 0, 0]
 
@@ -19,11 +18,11 @@ class Battlesnake(object):
         # It controls your Battlesnake appearance and author permissions.
         # TIP: If you open your Battlesnake URL in browser you should see this data
         return {
-            "apiversion": "1",
-            "author": "dplassgit",
-            "color": "#ff00ff",
-            "head": "bendr",
-            "tail": "pixel",
+            "APIVersion": "1",
+            "Author": "dplassgit",
+            "Color": "#0000ff",
+            "Head": "bendr",
+            "Tail": "pixel",
         }
 
     @cherrypy.expose
@@ -57,14 +56,48 @@ class Battlesnake(object):
       good = True
       dx = moves_dx[try_move_idx]
       dy = moves_dy[try_move_idx]
-      good = good and (self.y+dy >= 0)
-      good = good and (self.x+dx >= 0)
-      good = good and (self.y+dy < self.height)
-      good = good and (self.x+dx < self.width)
+      # avoid the outer edge at all costs.
+      good = good and (self.y+dy > 0)
+      good = good and (self.x+dx > 0)
+      good = good and (self.y+dy < self.height -1)
+      good = good and (self.x+dx < self.width-1)
       if good:
+        # TODO: if there's a head within this area and
+        # their length is greater than mine, run away
+        # If their length is smaller, it's still good.
         good = self.board[self.y+dy][self.x+dx] in ('.', 'F')
-
       return good
+
+    # return a (good) move towards food
+    def move_towards_food(self):
+      if not self.foods:
+        return ''
+      # 1. pick random food
+      food = random.choice(self.foods)    
+      print("going towards food", str(food))
+      # 2. move towards it, if there's a good_move
+      dx = food[1] - self.x
+      dy = food[0] - self.y
+
+      # right
+      if dx > 0 and self.good_move(3):
+        print("trying to go right towards food")
+        return move_names[3]
+      # left
+      if dx < 0 and self.good_move(2):
+        print("trying to go left towards food")
+        return move_names[2]
+      # up
+      if dy > 0 and self.good_move(0):
+        print("trying to go up towards food")
+        return move_names[0]
+      # down
+      if dy < 0 and self.good_move(1):
+        print("trying to go down towards food")
+        return move_names[1]
+
+      # 3. TODO: if no good move, try a different food
+      return ''
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -78,10 +111,9 @@ class Battlesnake(object):
         self.health  = self.me["health"]
         self.x = self.me["head"]["x"]
         self.y = self.me["head"]["y"]
-        print("x,y=%d,%d" % (self.x, self.y))
-
+      
         self.board = self.make_board(data)
-        #for row in range(self.height, 0, -1):
+        # for row in range(self.height - 1, -1, -1):
         #  print(''.join(self.board[row]))
 
         # Pick a direction to move in, unless it's bad
@@ -89,14 +121,21 @@ class Battlesnake(object):
           self.last_move = 0
 
         move = ''
-        if self.good_move(self.last_move):
-          move = possible_moves[self.last_move]
-        else:
-          for i in range(0, 4):
-            if self.good_move(i):
-              move = possible_moves[i]
-              self.last_move = i
-              break
+        # if hungry, move towards food
+        if self.health < 50:
+          # find nearest food (!)
+          move = self.move_towards_food()
+
+        if move == '':
+          # Otherwise, keep going in the same direction if possible.
+          if self.good_move(self.last_move):
+            move = move_names[self.last_move]
+          else:
+            for i in range(0, 4):
+              if self.good_move(i):
+                move = move_names[i]
+                self.last_move = i
+                break
         if move == '':
           print("Could not find a good move!")
           move = "up"
