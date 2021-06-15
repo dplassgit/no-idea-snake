@@ -10,6 +10,12 @@ move_names = ["up", "down", "left", "right"]
 moves_dx = [0, 0, -1, 1]
 moves_dy = [1, -1, 0, 0]
 
+class AnSnake(object):
+  pass
+
+# Map from key to AnSnake objects
+snakes = {}
+
 class Battlesnake(object):
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -30,6 +36,7 @@ class Battlesnake(object):
     def start(self):
         # This function is called everytime your snake is entered into a game.
         self.last_move = -1
+        self.food_target = None
         print("START")
         return "ok"
 
@@ -56,11 +63,28 @@ class Battlesnake(object):
       good = True
       dx = moves_dx[try_move_idx]
       dy = moves_dy[try_move_idx]
-      # avoid the outer edge at all costs.
-      good = good and (self.y+dy > 0)
-      good = good and (self.x+dx > 0)
-      good = good and (self.y+dy < self.height -1)
-      good = good and (self.x+dx < self.width-1)
+      # avoid the outer edge unless very hungry
+      if self.health < 40:
+        limit = 0
+      else:
+        limit = 1
+      good = good and (self.y+dy > limit - 1)
+      good = good and (self.x+dx > limit - 1)
+      good = good and (self.y+dy < self.height - limit)
+      good = good and (self.x+dx < self.width - limit)
+      if good:
+        # TODO: if there's a head within this area and
+        # their length is greater than mine, run away
+        # If their length is smaller, it's still good.
+        good = self.board[self.y+dy][self.x+dx] in ('.', 'F')
+
+      if not good:
+        # allow us to stay in the outer edge
+        limit = 0
+        good = good and (self.y+dy > limit - 1)
+        good = good and (self.x+dx > limit - 1)
+        good = good and (self.y+dy < self.height - limit)
+        good = good and (self.x+dx < self.width - limit)
       if good:
         # TODO: if there's a head within this area and
         # their length is greater than mine, run away
@@ -71,13 +95,15 @@ class Battlesnake(object):
     # return a (good) move towards food
     def move_towards_food(self):
       if not self.foods:
+        self.food_target = None
         return ''
-      # 1. pick random food
-      food = random.choice(self.foods)    
-      print("going towards food", str(food))
+      if not self.food_target:
+        # 1. pick random food
+        self.food_target  = random.choice(self.foods)    
+      print("going towards food", str(self.food_target))
       # 2. move towards it, if there's a good_move
-      dx = food[1] - self.x
-      dy = food[0] - self.y
+      dx = self.food_target[1] - self.x
+      dy = self.food_target[0] - self.y
 
       # right
       if dx > 0 and self.good_move(3):
@@ -87,15 +113,17 @@ class Battlesnake(object):
       if dx < 0 and self.good_move(2):
         print("trying to go left towards food")
         return move_names[2]
-      # up
-      if dy > 0 and self.good_move(0):
-        print("trying to go up towards food")
-        return move_names[0]
       # down
       if dy < 0 and self.good_move(1):
         print("trying to go down towards food")
         return move_names[1]
+      # up
+      if dy > 0 and self.good_move(0):
+        print("trying to go up towards food")
+        return move_names[0]
 
+      print("no good move towards food target")
+      self.food_target = None
       # 3. TODO: if no good move, try a different food
       return ''
 
@@ -114,7 +142,7 @@ class Battlesnake(object):
       
         self.board = self.make_board(data)
         # for row in range(self.height - 1, -1, -1):
-        #  print(''.join(self.board[row]))
+        #   print(''.join(self.board[row]))
 
         # Pick a direction to move in, unless it's bad
         if self.last_move == -1:
@@ -122,8 +150,7 @@ class Battlesnake(object):
 
         move = ''
         # if hungry, move towards food
-        if self.health < 50:
-          # find nearest food (!)
+        if self.health < 40:
           move = self.move_towards_food()
 
         if move == '':
@@ -139,7 +166,7 @@ class Battlesnake(object):
         if move == '':
           print("Could not find a good move!")
           move = "up"
-        print(f"MOVE: {move}")
+        print(f"MOVE: {move} at {self.x}, {self.y} health {self.health}")
         return {"move": move}
 
     @cherrypy.expose
