@@ -62,26 +62,35 @@ class AnSnake(object):
     dx = moves_dx[try_move_idx]
     dy = moves_dy[try_move_idx]
     movable = self.movable(self.y+dy, self.x+dx)
+    if not movable:
+      return -100
+    # TODO: if there's a head within this area and
+    # their length is smaller than mine, higher score
+    # TODO: if the LOOKAHEAD has a head, score it.
 
     # the new location is free.
     score = 0
     if self.board[self.y+dy][self.x+dx] == 'F':
       if self.health < 40:
-        score += 10
+        score += 25
+      elif self.length < 10:
+        # Care about food more if we're short.
+        score += 5
       else:
         score += 1
     outs = self.count_outs(self.y+dy, self.x+dx)
     # 0 outs = bad
-    score += outs
-    score += 5 if try_move_idx = self.last_move
+    score += 2*outs
+    if try_move_idx == self.last_move:
+       score += 1
     return score
 
   def count_outs(self, y, x):
     outs = 0
-    outs = outs + 1 if movable(y+1,x)
-    outs = outs + 1 if movable(y-1,x)
-    outs = outs + 1 if movable(y,x+1)
-    outs = outs + 1 if movable(y,x-1)
+    if self.movable(y+1,x): outs += 1
+    if self.movable(y-1,x): outs += 1
+    if self.movable(y,x+1): outs += 1
+    if self.movable(y,x-1): outs += 1
     return outs
 
   def movable(self, y, x):
@@ -90,44 +99,9 @@ class AnSnake(object):
     movable = movable and (x >= 0)
     movable = movable and (y < self.height)
     movable = movable and (x < self.width)
-    if not movabale:
+    if not movable:
       return False
-    # TODO: if there's a head within this area and
-    # their length is smaller than mine, higher score.
     return self.board[y][x] in ('.', 'F')
-
-  def good_move(self, try_move_idx):
-    good = True
-    dx = moves_dx[try_move_idx]
-    dy = moves_dy[try_move_idx]
-    # avoid the outer edge unless very hungry
-    if self.health < 40:
-      limit = 0
-    else:
-      limit = 1
-    good = good and (self.y+dy > limit - 1)
-    good = good and (self.x+dx > limit - 1)
-    good = good and (self.y+dy < self.height - limit)
-    good = good and (self.x+dx < self.width - limit)
-    if good:
-      # TODO: if there's a head within this area and
-      # their length is greater than mine, run away
-      # If their length is smaller, it's still good.
-      good = self.board[self.y+dy][self.x+dx] in ('.', 'F')
-
-    if not good:
-      # allow us to stay in the outer edge
-      limit = 0
-      good = good and (self.y+dy > limit - 1)
-      good = good and (self.x+dx > limit - 1)
-      good = good and (self.y+dy < self.height - limit)
-      good = good and (self.x+dx < self.width - limit)
-    if good:
-      # TODO: if there's a head within this area and
-      # their length is greater than mine, run away
-      # If their length is smaller, it's still good.
-      good = self.board[self.y+dy][self.x+dx] in ('.', 'F')
-    return good
 
   # return a (good) move towards food
   def move_towards_food(self):
@@ -168,11 +142,12 @@ class AnSnake(object):
     self.me = data["you"]
     self.x = self.me["head"]["x"]
     self.y = self.me["head"]["y"]
-    self.health  = self.me["health"]
+    self.health = self.me["health"]
+    self.length =  self.me["length"]
   
     self.board = self.make_board(data)
-    #for row in range(self.height - 1, -1, -1):
-    #  print(''.join(self.board[row]))
+    for row in range(self.height - 1, -1, -1):
+      print(''.join(self.board[row]))
 
     # Pick a direction to move in, unless it's bad
     if self.last_move == -1:
@@ -184,23 +159,14 @@ class AnSnake(object):
       #move = self.move_towards_food()
 
     if move == '':
-      # Otherwise, keep going in the same direction if possible.
-      #if self.good_move(self.last_move):
-      #  move = move_names[self.last_move]
-      #else:
-      #  for i in range(0, 4):
-      #    if self.good_move(i):
-      #      move = move_names[i]
-      #      self.last_move = i
-      #      break
-
+      # Find best move 
       best = -200
       best_idx = self.last_move
       for idx in range(0, 4):
         score = self.new_move_score(idx)
         print(f'Eval direction {move_names[idx]} score {score}')
         if score > best:
-          score = best
+          best = score
           best_idx = idx
       move = move_names[best_idx]
       print(f'Picked direction {move} score {best}')
@@ -259,7 +225,7 @@ class Battlesnake(object):
         snakes[snake.id] = snake
         move = snake.move(data)
 
-      print(f"MOVE: {move} at {snake.x}, {snake.y} health {snake.health}")
+      print(f"MOVE: {move} at {snake.x}, {snake.y} health {snake.health} length {snake.length}")
       return {"move": move}
 
   @cherrypy.expose
