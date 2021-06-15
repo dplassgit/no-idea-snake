@@ -122,8 +122,8 @@ class AnSnake(object):
     self.health  = self.me["health"]
   
     self.board = self.make_board(data)
-    # for row in range(self.height - 1, -1, -1):
-    #   print(''.join(self.board[row]))
+    #for row in range(self.height - 1, -1, -1):
+    #  print(''.join(self.board[row]))
 
     # Pick a direction to move in, unless it's bad
     if self.last_move == -1:
@@ -189,13 +189,13 @@ class Battlesnake(object):
       snake_id = me["id"]
       snake = snakes[snake_id]
       if snake:
-        move = snake.move()
+        move = snake.move(data)
       else:
         print(f"WTF UNKNOWN SNAKE ID %s RECEIVED", snake_id)
         snake = AnSnake(data)
         # extract id from data
         snakes[snake.id] = snake
-        move = snake.move()
+        move = snake.move(data)
 
       print(f"MOVE: {move} at {snake.x}, {snake.y} health {snake.health}")
       return {"move": move}
