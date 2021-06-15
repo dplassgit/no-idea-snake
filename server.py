@@ -47,6 +47,55 @@ class AnSnake(object):
 
     return board
 
+  # Ideas:
+  # 1. evaluate each direction, pick best
+  # 2. how to evaluate a move:
+  #   *. if there's a blockage, -100 OK
+  #   *. if it's in the same direction, +5 OK?
+  #   *. if it has food and we're > 70 (modulo length?), +1 OK
+  #   *. if it has food and we're < 40 +10 OK
+  #   *. count "outs" - the more outs, the higher the score OK
+  # 3. food override: if hungry, pick closest food and find the best move towards it. (?) (NOT DONE)
+  # returns int
+  def new_move_score(self, try_move_idx):
+    # means it's not blocked
+    dx = moves_dx[try_move_idx]
+    dy = moves_dy[try_move_idx]
+    movable = self.movable(self.y+dy, self.x+dx)
+
+    # the new location is free.
+    score = 0
+    if self.board[self.y+dy][self.x+dx] == 'F':
+      if self.health < 40:
+        score += 10
+      else:
+        score += 1
+    outs = self.count_outs(self.y+dy, self.x+dx)
+    # 0 outs = bad
+    score += outs
+    score += 5 if try_move_idx = self.last_move
+    return score
+
+  def count_outs(self, y, x):
+    outs = 0
+    outs = outs + 1 if movable(y+1,x)
+    outs = outs + 1 if movable(y-1,x)
+    outs = outs + 1 if movable(y,x+1)
+    outs = outs + 1 if movable(y,x-1)
+    return outs
+
+  def movable(self, y, x):
+    movable = True
+    movable = movable and (y >= 0)
+    movable = movable and (x >= 0)
+    movable = movable and (y < self.height)
+    movable = movable and (x < self.width)
+    if not movabale:
+      return False
+    # TODO: if there's a head within this area and
+    # their length is smaller than mine, higher score.
+    return self.board[y][x] in ('.', 'F')
+
   def good_move(self, try_move_idx):
     good = True
     dx = moves_dx[try_move_idx]
@@ -131,19 +180,32 @@ class AnSnake(object):
 
     move = ''
     # if hungry, move towards food
-    if self.health < 40:
-      move = self.move_towards_food()
+    #if self.health < 40:
+      #move = self.move_towards_food()
 
     if move == '':
       # Otherwise, keep going in the same direction if possible.
-      if self.good_move(self.last_move):
-        move = move_names[self.last_move]
-      else:
-        for i in range(0, 4):
-          if self.good_move(i):
-            move = move_names[i]
-            self.last_move = i
-            break
+      #if self.good_move(self.last_move):
+      #  move = move_names[self.last_move]
+      #else:
+      #  for i in range(0, 4):
+      #    if self.good_move(i):
+      #      move = move_names[i]
+      #      self.last_move = i
+      #      break
+
+      best = -200
+      best_idx = self.last_move
+      for idx in range(0, 4):
+        score = self.new_move_score(idx)
+        print(f'Eval direction {move_names[idx]} score {score}')
+        if score > best:
+          score = best
+          best_idx = idx
+      move = move_names[best_idx]
+      print(f'Picked direction {move} score {best}')
+      self.last_move = best_idx
+
     if move == '':
       print("Could not find a good move!")
       move = "up"
