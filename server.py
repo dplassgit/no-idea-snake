@@ -51,7 +51,7 @@ class AnSnake(object):
   # 1. evaluate each direction, pick best
   # 2. how to evaluate a move:
   #   *. if there's a blockage, -100 OK
-  #   *. if it's in the same direction, +5 OK?
+  #   *. if it's in the same direction, +1 OK?
   #   *. if it has food and we're > 70 (modulo length?), +1 OK
   #   *. if it has food and we're < 40 +10 OK
   #   *. count "outs" - the more outs, the higher the score OK
@@ -72,10 +72,10 @@ class AnSnake(object):
     score = 0
     if self.board[self.y+dy][self.x+dx] == 'F':
       if self.health < 40:
-        score += 10
+        score += 20
       elif self.length < self.width:
         # Care about food a little more if we're short.
-        score += 2
+        score += 3
       else:
         score += 1
     outs = self.count_outs(self.y+dy, self.x+dx)
@@ -88,25 +88,33 @@ class AnSnake(object):
   def count_outs(self, y, x):
     outs = 0
     if self.movable(y+1,x): 
-      outs += 2
+      outs += 3
+      if self.movable(y+2,x):
+        outs += 1
       if self.movable(y+1,x+1):
         outs += 1
       if self.movable(y+1,x-1):
         outs += 1
     if self.movable(y-1,x): 
-      outs += 2
+      outs += 3
+      if self.movable(y-2,x):
+        outs += 1
       if self.movable(y-1,x+1):
         outs += 1
       if self.movable(y-1,x-1):
         outs += 1
     if self.movable(y,x+1): 
-      outs += 2
+      outs += 3
+      if self.movable(y,x+2):
+        outs += 1
       if self.movable(y+1,x+1):
         outs += 1
       if self.movable(y-1,x+1):
         outs += 1
     if self.movable(y,x-1): 
-      outs += 2
+      outs += 3
+      if self.movable(y,x-2):
+        outs += 1
       if self.movable(y+1,x-1):
         outs += 1
       if self.movable(y-1,x-1):
@@ -167,8 +175,8 @@ class AnSnake(object):
     self.length =  self.me["length"]
   
     self.board = self.make_board(data)
-    for row in range(self.height - 1, -1, -1):
-      print(''.join(self.board[row]))
+    #for row in range(self.height - 1, -1, -1):
+    #  print(''.join(self.board[row]))
 
     # Pick a direction to move in, unless it's bad
     if self.last_move == -1:
@@ -226,7 +234,7 @@ class Battlesnake(object):
       snake = AnSnake(data)
       # extract id from data
       snakes[snake.id] = snake
-      print(f"START id %s", snake.id)
+      print(f"START id {snake.id}")
       return "ok"
 
   @cherrypy.expose
@@ -234,19 +242,20 @@ class Battlesnake(object):
   @cherrypy.tools.json_out()
   def move(self):
       data = cherrypy.request.json
+      turn = data["turn"]
       me = data["you"]
       snake_id = me["id"]
       snake = snakes[snake_id]
       if snake:
         move = snake.move(data)
       else:
-        print(f"WTF UNKNOWN SNAKE ID %s RECEIVED", snake_id)
+        print(f"WTF UNKNOWN SNAKE ID {snake_id} RECEIVED")
         snake = AnSnake(data)
         # extract id from data
         snakes[snake.id] = snake
         move = snake.move(data)
 
-      print(f"MOVE: {move} at {snake.x}, {snake.y} health {snake.health} length {snake.length}")
+      print(f"MOVE: {move} at {snake.x}, {snake.y} health {snake.health} length {snake.length} turn {turn}")
       return {"move": move}
 
   @cherrypy.expose
