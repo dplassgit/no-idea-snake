@@ -72,25 +72,46 @@ class AnSnake(object):
     score = 0
     if self.board[self.y+dy][self.x+dx] == 'F':
       if self.health < 40:
-        score += 25
-      elif self.length < 10:
-        # Care about food more if we're short.
-        score += 5
+        score += 10
+      elif self.length < self.width:
+        # Care about food a little more if we're short.
+        score += 2
       else:
         score += 1
     outs = self.count_outs(self.y+dy, self.x+dx)
     # 0 outs = bad
     score += 2*outs
     if try_move_idx == self.last_move:
-       score += 1
+      score += 1
     return score
 
   def count_outs(self, y, x):
     outs = 0
-    if self.movable(y+1,x): outs += 1
-    if self.movable(y-1,x): outs += 1
-    if self.movable(y,x+1): outs += 1
-    if self.movable(y,x-1): outs += 1
+    if self.movable(y+1,x): 
+      outs += 2
+      if self.movable(y+1,x+1):
+        outs += 1
+      if self.movable(y+1,x-1):
+        outs += 1
+    if self.movable(y-1,x): 
+      outs += 2
+      if self.movable(y-1,x+1):
+        outs += 1
+      if self.movable(y-1,x-1):
+        outs += 1
+    if self.movable(y,x+1): 
+      outs += 2
+      if self.movable(y+1,x+1):
+        outs += 1
+      if self.movable(y-1,x+1):
+        outs += 1
+    if self.movable(y,x-1): 
+      outs += 2
+      if self.movable(y+1,x-1):
+        outs += 1
+      if self.movable(y-1,x-1):
+        outs += 1
+
     return outs
 
   def movable(self, y, x):
