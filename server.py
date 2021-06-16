@@ -58,12 +58,12 @@ class AnSnake(object):
   # 3. food override: if hungry, pick closest food and find the best move towards it. (?) (NOT DONE)
   # returns int
   def new_move_score(self, try_move_idx):
-    # means it's not blocked
     dx = moves_dx[try_move_idx]
     dy = moves_dy[try_move_idx]
     movable = self.movable(self.y+dy, self.x+dx)
     if not movable:
       return -100
+
     # TODO: if there's a head within this area and
     # their length is smaller than mine, higher score
     # TODO: if the LOOKAHEAD has a head, score it.
@@ -72,54 +72,42 @@ class AnSnake(object):
     score = 0
     if self.board[self.y+dy][self.x+dx] == 'F':
       if self.health < 40:
-        score += 20
+        score += 300
       elif self.length < self.width:
         # Care about food a little more if we're short.
-        score += 3
+        score += 100
       else:
-        score += 1
-    outs = self.count_outs(self.y+dy, self.x+dx)
+        score += 25
+    outs = self.count_outs_ply(self.y+dy, self.x+dx, 4)
+    print(f'Outs at {self.y+dy}, {self.x+dx}: {outs}')
     # 0 outs = bad
-    score += 2*outs
-    if try_move_idx == self.last_move:
-      score += 1
+    score += outs
+    #if try_move_idx == self.last_move:
+     # score += 10
     return score
 
-  def count_outs(self, y, x):
+  def count_outs_ply(self, y, x, ply):
+    if ply == 0:
+      return 0
     outs = 0
+    temp = self.board[y][x]
+    self.board[y][x] = 'x'
+    # for row in range(self.height - 1, -1, -1):
+    #   print(''.join(self.board[row]))
+    # print("")
     if self.movable(y+1,x): 
-      outs += 3
-      if self.movable(y+2,x):
-        outs += 1
-      if self.movable(y+1,x+1):
-        outs += 1
-      if self.movable(y+1,x-1):
-        outs += 1
+      outs += ply
+      outs += self.count_outs_ply(y+1, x, ply-1)
     if self.movable(y-1,x): 
-      outs += 3
-      if self.movable(y-2,x):
-        outs += 1
-      if self.movable(y-1,x+1):
-        outs += 1
-      if self.movable(y-1,x-1):
-        outs += 1
+      outs += ply
+      outs += self.count_outs_ply(y-1, x, ply-1)
     if self.movable(y,x+1): 
-      outs += 3
-      if self.movable(y,x+2):
-        outs += 1
-      if self.movable(y+1,x+1):
-        outs += 1
-      if self.movable(y-1,x+1):
-        outs += 1
+      outs += ply
+      outs += self.count_outs_ply(y, x+1, ply-1)
     if self.movable(y,x-1): 
-      outs += 3
-      if self.movable(y,x-2):
-        outs += 1
-      if self.movable(y+1,x-1):
-        outs += 1
-      if self.movable(y-1,x-1):
-        outs += 1
-
+      outs += ply
+      outs += self.count_outs_ply(y, x-1, ply-1)
+    self.board[y][x] = temp
     return outs
 
   def movable(self, y, x):
